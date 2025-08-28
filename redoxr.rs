@@ -16,7 +16,8 @@ pub struct Mcule {
 }
 
 pub struct CMcule {
-
+    file: String,
+    deps: (),
 }
 
 pub enum RustCrateType {
@@ -29,5 +30,8 @@ pub enum RustCrateType {
 pub struct RustMcule {
     crate_type: RustCrateType,
     outpath: String,
-
+    src: String,
+    root: String,
+    file: String,
+    deps: (),
 }
