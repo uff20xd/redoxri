@@ -11,8 +11,52 @@ pub type Cmd = Command;
 pub struct Mcule {
     name: String,
     outpath: String,
-    inputs: &[],
+    inputs: Vec<*const Mcule>,
     command: Cmd,
+    last_changed: (),
+}
+
+
+impl Mcule {
+    pub fn new(name: &str, outpath: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            outpath: outpath.to_owned(),
+            inputs: Vec::new(),
+            command: Cmd::new(""),
+            last_changed: (),
+        }
+    }
+    pub fn with(mut self, inputs: &[&Mcule]) -> Self {
+        for i in inputs {
+            self.inputs.push(i.to_owned());
+        }
+        self
+    }
+}
+
+impl From<&str> for Mcule {
+    fn from(item: &str) -> Self {
+        Self {
+            name: "".to_owned(),
+            outpath: item.to_owned(),
+            inputs: Vec::new(),
+            command: Cmd::new(""),
+            last_changed: (),
+        }
+    }
+}
+
+impl From<&str> for &Mcule {
+    fn from(item: &str) -> &'static Mcule{
+        &Mcule{
+            name: "".to_owned(),
+            outpath: item.to_owned(),
+            inputs: Vec::new(),
+            command: Cmd::new(""),
+            last_changed: (),
+        }
+    }
 }
 
 pub struct CMcule {
