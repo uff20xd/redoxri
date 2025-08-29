@@ -1,5 +1,5 @@
-mod redoxr;
-use redoxr::*;
+mod redoxri;
+use redoxri::*;
 
 fn main() -> () {
     let main = Mcule::new("redoxr", "./redoxr.rs")

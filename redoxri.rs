@@ -12,7 +12,7 @@ pub struct Mcule {
     name: String,
     outpath: String,
     inputs: Vec<*const Mcule>,
-    command: Cmd,
+    recipe: Vec<String>,
     last_changed: (),
 }
 
@@ -23,11 +23,11 @@ impl Mcule {
             name: name.to_owned(),
             outpath: outpath.to_owned(),
             inputs: Vec::new(),
-            command: Cmd::new(""),
+            recipe: Vec::new(),
             last_changed: (),
         }
     }
-    pub fn with(mut self, inputs: &[&Mcule]) -> Self {
+    pub fn with(mut self, inputs: &[Mcule]) -> Self {
         for i in inputs {
             self.inputs.push(i.to_owned());
         }
@@ -42,7 +42,12 @@ impl Mcule {
 
     pub fn compile() -> () {}
 
-    pub fn just_compile(&self) -> Result<(), Box<std::error::Error>>
+    pub fn just_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
+        for command in &self.recipe {
+            let split_command = command.to_string().split_whitespace();
+        }
+        Ok(())
+    }
 }
 
 impl From<&str> for Mcule {
@@ -51,19 +56,7 @@ impl From<&str> for Mcule {
             name: "".to_owned(),
             outpath: item.to_owned(),
             inputs: Vec::new(),
-            command: Cmd::new(""),
-            last_changed: (),
-        }
-    }
-}
-
-impl From<&str> for &Mcule {
-    fn from(item: &str) -> &'static Mcule{
-        &Mcule{
-            name: "".to_owned(),
-            outpath: item.to_owned(),
-            inputs: Vec::new(),
-            command: Cmd::new(""),
+            recipe: Vec::new(),
             last_changed: (),
         }
     }
