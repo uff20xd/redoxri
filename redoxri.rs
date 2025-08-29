@@ -33,6 +33,16 @@ impl Mcule {
         }
         self
     }
+
+    pub fn check(&self) -> bool {
+        false
+    }
+
+    pub fn check_and_compile() -> () {}
+
+    pub fn compile() -> () {}
+
+    pub fn just_compile(&self) -> Result<(), Box<std::error::Error>>
 }
 
 impl From<&str> for Mcule {
