@@ -3,6 +3,10 @@ use redoxri::*;
 
 fn main() -> () {
     let main = Mcule::new("redoxr", "./redoxr.rs")
-        .with(&["test".into()]);
+        .add_step(&[
+            "echo", "test",
+        ])
+        .with(&["test".into()])
+        .just_compile();
 
 }

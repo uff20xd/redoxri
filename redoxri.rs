@@ -8,11 +8,12 @@ use std::{
 
 pub type Cmd = Command;
 
+#[derive(Clone)]
 pub struct Mcule {
     name: String,
     outpath: String,
-    inputs: Vec<*const Mcule>,
-    recipe: Vec<String>,
+    inputs: Vec<Mcule>,
+    recipe: Vec<Vec<String>>,
     last_changed: (),
 }
 
@@ -29,24 +30,47 @@ impl Mcule {
     }
     pub fn with(mut self, inputs: &[Mcule]) -> Self {
         for i in inputs {
-            self.inputs.push(i.to_owned());
+            self.inputs.push(i.clone());
         }
         self
     }
 
-    pub fn check(&self) -> bool {
-        false
+    pub fn check_if_up_to_date(&self) -> bool {
+        if inputs.len() == 0 {
+            return true;
+        } else {
+            for i in &self.inputs {
+
+            }
+            return false;
+        }
     }
 
-    pub fn check_and_compile() -> () {}
+    fn get_comp_date(&self) -> () {
+        todo!();
+    }
 
     pub fn compile() -> () {}
 
     pub fn just_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
-        for command in &self.recipe {
-            let split_command = command.to_string().split_whitespace();
+        let mut recipe = self.recipe.clone();
+        for mut step in &mut recipe {
+            let mut cmd = Command::new(step.remove(0));
+            for command in step {
+                _ = cmd.arg(&command);
+            }
+            //dbg!(&cmd);
+            _ = cmd.status();
         }
         Ok(())
+    }
+    pub fn add_step(mut self, step: &[&str]) -> Self {
+        let mut new_step: Vec<String> = Vec::new();
+        for arg in step {
+            new_step.push(arg.to_string());
+        }
+        self.recipe.push(new_step);
+        self
     }
 }
 
