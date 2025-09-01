@@ -10,5 +10,6 @@ fn main() -> () {
         .with(&["test".into()])
         .just_compile();
 
-    println!("Oh yeah!");
+
+    println!("Bow Kreah!");
 }

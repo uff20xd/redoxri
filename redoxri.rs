@@ -50,7 +50,7 @@ impl Redoxri {
                 .args(&["-o", &args[0]])
                 //.args(COMP_VERSION)
                 .args(&self.settings[..]);
-            dbg!(&compile_command);
+            //dbg!(&compile_command);
 
             #[cfg(verbose)]
             let _ = compile_command.status()?;
