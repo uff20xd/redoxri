@@ -7,6 +7,9 @@ use std::{
         exit,
     },
     fs,
+    time::{
+        Duration,
+    },
 };
 
 pub type Cmd = Command;
@@ -47,6 +50,7 @@ impl Redoxri {
                 .args(&["-o", &args[0]])
                 //.args(COMP_VERSION)
                 .args(&self.settings[..]);
+            dbg!(&compile_command);
 
             #[cfg(verbose)]
             let _ = compile_command.status()?;
@@ -103,14 +107,14 @@ impl Mcule {
         }
     }
 
-    fn get_comp_date(&self) -> Result<i64, Box<std::error::Error>> {
-        let this_file = fs::File::open(&main_file_name)?;
+    fn get_comp_date(&self) -> Result<Duration, Box<dyn std::error::Error>> {
+        let this_file = fs::File::open(&self.outpath)?;
 
         #[cfg(debug)]
         println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
 
-        let time = main_file.metadata()?.modified()?.elapsed()?;
-        Ok(())
+        let time = this_file.metadata()?.modified()?.elapsed()?;
+        Ok(time)
     }
 
     pub fn compile(&self) -> () {
