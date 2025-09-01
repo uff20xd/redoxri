@@ -1,30 +1,39 @@
+#![allow(dead_code)]
 /// Welcome to Redoxr
 
 use std::{
     process::{
         Command,
+        exit,
     },
+    fs,
 };
 
 pub type Cmd = Command;
 
 #[derive(Clone)]
-struct Redoxri {
+pub struct Redoxri {
     settings: Vec<String>,
     args: Vec<String>,
 }
 
 impl Redoxri {
-    pub fn new (&[]) -> Self {
-        Self {
-            settings: Vec::new(),
-            args: Vec::new(),
-        }.self_compile()
+    pub fn new(in_settings: &[&str]) -> Self {
+        let args: Vec<String> = std::env::args().collect();
+        let mut settings = Vec::new();
+        for setting in in_settings {
+            settings.push(setting.to_string());
+        }
+        let me = Self {
+            settings,
+            args,
+        };
+        _ = me.self_compile();
+        me
     }
 
-    pub fn self_compile(&mut self) -> {
-        let args: Vec<String> = std::env::args().collect();
-        self.args = args.clone();
+    pub fn self_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let args = self.args.clone();
         let main_file_name = args[0].clone() + ".rs";
         let main_file = fs::File::open(&main_file_name)?;
         let exec_file = fs::File::open(&args[0])?;
@@ -36,8 +45,8 @@ impl Redoxri {
             let mut compile_command = Command::new("rustc");
             let _ = compile_command.arg(&main_file_name)
                 .args(&["-o", &args[0]])
-                .args(COMP_VERSION)
-                .args(&self.flags[..]);
+                //.args(COMP_VERSION)
+                .args(&self.settings[..]);
 
             #[cfg(verbose)]
             let _ = compile_command.status()?;
@@ -51,6 +60,7 @@ impl Redoxri {
 
             exit(0)
         }
+        Ok(())
     }
 }
 
@@ -82,29 +92,34 @@ impl Mcule {
     }
 
     pub fn check_if_up_to_date(&self) -> bool {
-        if inputs.len() == 0 {
+        if self.inputs.len() == 0 {
             return true;
         } else {
+            let my_date = self.get_comp_date();
             for i in &self.inputs {
-
+                i.compile();
             }
             return false;
         }
     }
 
-    fn get_comp_date(&self) -> () {
-        todo!();
+    fn get_comp_date(&self) -> Result<i64, Box<std::error::Error>> {
+        let this_file = fs::File::open(&main_file_name)?;
+
+        #[cfg(debug)]
+        println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
+
+        let time = main_file.metadata()?.modified()?.elapsed()?;
+        Ok(())
     }
 
     pub fn compile(&self) -> () {
-        if !self.check_if_up_to_date() {
-            self.just_compile();
-        }
+        _ = self.just_compile();
     }
 
     pub fn just_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut recipe = self.recipe.clone();
-        for mut step in &mut recipe {
+        for step in &mut recipe {
             let mut cmd = Command::new(step.remove(0));
             for command in step {
                 _ = cmd.arg(&command);
