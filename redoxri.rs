@@ -119,6 +119,26 @@ impl Mcule {
 
     pub fn compile(&self) -> () {
         _ = self.just_compile();
+        return ();
+
+        let mut need_to_compile = false;
+        let last_change = match self.get_comp_date() {
+            Ok(time_since_last_change) => {
+                for i in &self.inputs {
+                    i.compile();
+                    if i.get_comp_date() < time_since_last_change {
+                        need_to_compile = true;
+                    }
+                }
+            },
+            Err(_) => {
+                _ = self.just_compile();
+            },
+        };
+
+        if need_to_compile {
+            _ = self.just_compile();
+        }
     }
 
     pub fn just_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
