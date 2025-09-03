@@ -1,15 +1,20 @@
 mod redoxri;
 use redoxri::*;
+use std::path::Path;
 
 fn main() -> () {
-    let _redoxri = Redoxri::new(&[]);
-    let main = Mcule::new("redoxr", "./redoxr.rs")
+    let _redoxri = Redoxri::new(&[
+        "--cfg", "isolate",
+        "--cfg", "check",
+    ]);
+    let main = Mcule::new("redoxri", "./libredoxri.rlib")
         .add_step(&[
-            "echo", "test",
+            "rustc", "./redoxri.rs", "--crate-type", "lib",
         ])
-        .with(&["test".into()])
-        .just_compile();
+        .with(&["redoxri.rs".into()])
+        .compile();
 
 
-    println!("Bow Kreah!");
+
+    println!("sshlow mehr!");
 }

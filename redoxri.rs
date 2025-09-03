@@ -13,11 +13,13 @@ use std::{
 };
 
 pub type Cmd = Command;
+pub type RxiError = Box<dyn std::error::Error>;
 
 #[derive(Clone)]
 pub struct Redoxri {
     settings: Vec<String>,
     args: Vec<String>,
+    mcule: Mcule,
 }
 
 impl Redoxri {
@@ -27,9 +29,15 @@ impl Redoxri {
         for setting in in_settings {
             settings.push(setting.to_string());
         }
+
+        let main_file_name = args[0].clone() + ".rs";
+
+        let _mcule = Mcule::new("redoxri_script", &args[0])
+            .with(&[main_file_name.to_str().into()]);
         let me = Self {
             settings,
             args,
+            mcule: "build.rs".into(),
         };
         _ = me.self_compile();
         me
@@ -41,6 +49,9 @@ impl Redoxri {
         let main_file = fs::File::open(&main_file_name)?;
         let exec_file = fs::File::open(&args[0])?;
 
+        #[cfg(isolate)]
+        {
+        }
         #[cfg(debug)]
         println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
 
@@ -52,10 +63,10 @@ impl Redoxri {
                 .args(&self.settings[..]);
             //dbg!(&compile_command);
 
-            #[cfg(verbose)]
-            let _ = compile_command.status()?;
+            //#[cfg(verbose)]
+            //let _ = compile_command.status()?;
 
-            #[cfg(not(verbose))]
+            //#[cfg(not(verbose))]
             let _ = compile_command.output()?;
 
             let mut run_command = Command::new(&args[0]);
@@ -68,7 +79,7 @@ impl Redoxri {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Mcule {
     name: String,
     outpath: String,
@@ -96,12 +107,13 @@ impl Mcule {
     }
 
     pub fn check_if_up_to_date(&self) -> bool {
+        return false;
         if self.inputs.len() == 0 {
             return true;
         } else {
-            let my_date = self.get_comp_date();
-            for i in &self.inputs {
-                i.compile();
+            let _my_date = self.get_comp_date();
+            for _i in &self.inputs {
+                //i.compile();
             }
             return false;
         }
@@ -117,16 +129,19 @@ impl Mcule {
         Ok(time)
     }
 
-    pub fn compile(&self) -> () {
+    pub fn compile(self) -> Self {
         _ = self.just_compile();
-        return ();
 
         let mut need_to_compile = false;
-        let last_change = match self.get_comp_date() {
+        let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
-                    i.compile();
-                    if i.get_comp_date() < time_since_last_change {
+                    i.clone().compile();
+                    dbg!(&i);
+                    dbg!(&time_since_last_change);
+                    let comp_date_i = i.get_comp_date().unwrap();
+                    dbg!(&comp_date_i);
+                    if comp_date_i < time_since_last_change {
                         need_to_compile = true;
                     }
                 }
@@ -138,7 +153,10 @@ impl Mcule {
 
         if need_to_compile {
             _ = self.just_compile();
+            dbg!(&self);
         }
+        self
+        //Ok(())
     }
 
     pub fn just_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
