@@ -32,12 +32,19 @@ impl Redoxri {
 
         let main_file_name = args[0].clone() + ".rs";
 
-        let _mcule = Mcule::new("redoxri_script", &args[0])
-            .with(&[main_file_name.to_str().into()]);
+        let mcule = Mcule::new("redoxri_script", &args[0])
+            .with(&[
+                main_file_name.into(),
+                "redoxri.rs".into(),
+            ])
+            .add_step(&[
+                "rustc", 
+                "$out"
+            ]);
         let me = Self {
             settings,
             args,
-            mcule: "build.rs".into(),
+            mcule,
         };
         _ = me.self_compile();
         me
@@ -51,10 +58,21 @@ impl Redoxri {
 
         #[cfg(isolate)]
         {
+
         }
+
         #[cfg(debug)]
         println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
 
+        #[cfg(unstable)]
+        self.mcule.compile();
+
+        #[cfg(unstable)]
+        if main_file.metadata()?.modified()?.elapsed()? < exec_file.metadata()?.modified()?.elapsed()? {
+            self.mcule.run();
+        }
+
+        #[cfg(not(unstable))]
         if main_file.metadata()?.modified()?.elapsed()? < exec_file.metadata()?.modified()?.elapsed()? {
             let mut compile_command = Command::new("rustc");
             let _ = compile_command.arg(&main_file_name)
@@ -67,7 +85,11 @@ impl Redoxri {
             //let _ = compile_command.status()?;
 
             //#[cfg(not(verbose))]
-            let _ = compile_command.output()?;
+            //dbg!(compile_command.output()?);
+            if compile_command.output()?.status != 0 {
+                compile_command.status()?;
+                exit(2)
+            }
 
             let mut run_command = Command::new(&args[0]);
 
@@ -174,7 +196,10 @@ impl Mcule {
     pub fn add_step(mut self, step: &[&str]) -> Self {
         let mut new_step: Vec<String> = Vec::new();
         for arg in step {
-            new_step.push(arg.to_string());
+            if *arg == "$out" {
+                new_step.push(self.outpath.clone());
+            }
+            else {new_step.push(arg.to_string());}
         }
         self.recipe.push(new_step);
         self
@@ -186,6 +211,18 @@ impl From<&str> for Mcule {
         Self {
             name: "".to_owned(),
             outpath: item.to_owned(),
+            inputs: Vec::new(),
+            recipe: Vec::new(),
+            last_changed: (),
+        }
+    }
+}
+
+impl From<String> for Mcule {
+    fn from(item: String) -> Self {
+        Self {
+            name: "".to_owned(),
+            outpath: item,
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
