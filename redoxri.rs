@@ -65,11 +65,8 @@ impl Redoxri {
         println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
 
         #[cfg(unstable)]
-        self.mcule.compile();
+        if self.check_if_up_to_date() {
 
-        #[cfg(unstable)]
-        if main_file.metadata()?.modified()?.elapsed()? < exec_file.metadata()?.modified()?.elapsed()? {
-            self.mcule.run();
         }
 
         #[cfg(not(unstable))]
@@ -128,17 +125,24 @@ impl Mcule {
         self
     }
 
-    pub fn check_if_up_to_date(&self) -> bool {
-        return false;
-        if self.inputs.len() == 0 {
-            return true;
-        } else {
-            let _my_date = self.get_comp_date();
-            for _i in &self.inputs {
-                //i.compile();
-            }
-            return false;
-        }
+    pub fn is_up_to_date(&self) -> bool {
+        let _last_change = match self.get_comp_date() {
+            Ok(time_since_last_change) => {
+                for i in &self.inputs {
+                    //dbg!(&i);
+                    //dbg!(&time_since_last_change);
+                    let comp_date_i = i.get_comp_date().unwrap();
+                    //dbg!(&comp_date_i);
+                    if comp_date_i < time_since_last_change {
+                        return false;
+                    }
+                }
+            },
+            Err(_) => {
+                return false;
+            },
+        };
+        true
     }
 
     fn get_comp_date(&self) -> Result<Duration, Box<dyn std::error::Error>> {
@@ -151,18 +155,16 @@ impl Mcule {
         Ok(time)
     }
 
-    pub fn compile(self) -> Self {
-        _ = self.just_compile();
-
+    pub fn compile(self) -> (Self, bool) {
         let mut need_to_compile = false;
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
                     i.clone().compile();
-                    dbg!(&i);
-                    dbg!(&time_since_last_change);
+                    //dbg!(&i);
+                    //dbg!(&time_since_last_change);
                     let comp_date_i = i.get_comp_date().unwrap();
-                    dbg!(&comp_date_i);
+                    //dbg!(&comp_date_i);
                     if comp_date_i < time_since_last_change {
                         need_to_compile = true;
                     }
