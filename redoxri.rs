@@ -65,8 +65,9 @@ impl Redoxri {
         println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
 
         #[cfg(unstable)]
-        if self.check_if_up_to_date() {
-
+        if self.mcule.check_if_up_to_date() {
+            self.mcule.compile();
+            self.mcule.run();
         }
 
         #[cfg(not(unstable))]
@@ -83,7 +84,7 @@ impl Redoxri {
 
             //#[cfg(not(verbose))]
             //dbg!(compile_command.output()?);
-            if compile_command.output()?.status != 0 {
+            if !compile_command.output()?.status.success() {
                 compile_command.status()?;
                 exit(2)
             }
@@ -155,7 +156,7 @@ impl Mcule {
         Ok(time)
     }
 
-    pub fn compile(self) -> (Self, bool) {
+    pub fn compile(self) -> Self {
         let mut need_to_compile = false;
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
