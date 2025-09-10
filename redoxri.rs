@@ -34,13 +34,14 @@ impl Redoxri {
 
         let mcule = Mcule::new("redoxri_script", &args[0])
             .with(&[
-                main_file_name.into(),
+                main_file_name.clone().into(),
                 "redoxri.rs".into(),
             ])
             .add_step(&[
                 "rustc", 
-                "$out"
+                &main_file_name,
             ]);
+
         let me = Self {
             settings,
             args,
@@ -67,6 +68,9 @@ impl Redoxri {
         #[cfg(unstable)]
         if self.mcule.check_if_up_to_date() {
             self.mcule.compile();
+            if self.mcule.status != 0 {
+                exit(2)
+            }
             self.mcule.run();
         }
 
@@ -106,6 +110,7 @@ pub struct Mcule {
     inputs: Vec<Mcule>,
     recipe: Vec<Vec<String>>,
     last_changed: (),
+    pub status: i32,
 }
 
 
@@ -117,6 +122,7 @@ impl Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
+            status: 0,
         }
     }
     pub fn with(mut self, inputs: &[Mcule]) -> Self {
@@ -196,6 +202,7 @@ impl Mcule {
         }
         Ok(())
     }
+
     pub fn add_step(mut self, step: &[&str]) -> Self {
         let mut new_step: Vec<String> = Vec::new();
         for arg in step {
@@ -205,6 +212,11 @@ impl Mcule {
             else {new_step.push(arg.to_string());}
         }
         self.recipe.push(new_step);
+        self
+    }
+
+    pub fn copy_to(&self, to: &str) -> &Self {
+        _ = fs::copy(self.outpath.clone(), to);
         self
     }
 }
@@ -217,6 +229,7 @@ impl From<&str> for Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
+            status: 0,
         }
     }
 }
@@ -229,6 +242,7 @@ impl From<String> for Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
+            status: 0,
         }
     }
 }
