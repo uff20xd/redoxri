@@ -267,3 +267,20 @@ pub struct RustMcule {
     file: String,
     deps: (),
 }
+
+impl RustMcule {
+    pub fn new(name: &str, root: &str) -> Self {
+        Self {
+            crate_type: RustCrateType::Lib,
+            outpath: "".to_owned(),
+            src: ".".to_owned(),
+            root: root.to_owned(),
+            file: "main.rs".to_owned(),
+            deps: (),
+        }
+    }
+
+    pub fn make(&self) -> Mcule{
+        "".into()
+    }
+}
