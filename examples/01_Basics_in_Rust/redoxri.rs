@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-/// Welcome to Redoxr
+/// Welcome to Redoxri
 
 use std::{
     process::{
@@ -257,13 +257,79 @@ pub enum RustCrateType {
     Bin,
     Lib,
     Rlib,
+    Empty,
 }
 
-pub struct RustMcule {
+pub struct RustMcule<'a> {
+    name: &'a str,
     crate_type: RustCrateType,
     outpath: String,
     src: String,
     root: String,
     file: String,
-    deps: (),
+    flags: Vec<&'a str>,
+    deps: Vec<Mcule>,
+    pre_steps: Vec<Vec<String>>,
+    post_steps: Vec<Vec<String>>,
+}
+
+impl<'a> RustMcule<'a> {
+    pub fn new(name: &'a str, root: &str) -> Self {
+        Self {
+            name, 
+            crate_type: RustCrateType::Lib,
+            outpath: "".to_owned(),
+            src: ".".to_owned(),
+            root: root.to_owned(),
+            file: "main.rs".to_owned(),
+            deps: Vec::new(),
+            flags: Vec::new(),
+            pre_steps: Vec::new(),
+            post_steps: Vec::new(),
+        }
+    }
+
+    pub fn finish(&self) -> Mcule {
+        "".into()
+    }
+
+    pub fn make_lib(&mut self) -> &mut Self {
+        self.crate_type = match &self.crate_type {
+            RustCrateType::Empty => {panic!("Cant change an empty crate to a library! (fn make_lib)")},
+            _ => { RustCrateType::Lib }
+        };
+        self
+    }
+
+    pub fn make_bin(&mut self) -> &mut Self {
+        self.crate_type = match &self.crate_type {
+            RustCrateType::Empty => {panic!("Cant change an empty crate to a library! (fn make_bin)")},
+            _ => { RustCrateType::Bin }
+        };
+        self
+    }
+
+    pub fn set_root(&mut self, new_root: &str) -> &mut Self {
+        self.root = new_root.to_owned();
+        self
+    }
+
+    pub fn set_src(&mut self, new_src: &str) -> &mut Self {
+        self.src = new_src.to_owned();
+        self
+    }
+
+    pub fn set_main(&mut self, new_main: &str) -> &mut Self {
+        self.file = new_main.to_owned();
+        self
+    }
+
+    pub fn add_pre_step(&mut self, step: &[&'a str]) -> &mut Self {
+        let mut pre_step = Vec::new();
+        for i in step {
+            pre_step.push(i.to_string());
+        }
+        self.pre_steps.push(pre_step);
+        self
+    }
 }
