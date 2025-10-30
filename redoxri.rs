@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_mut)]
 /// Welcome to Redoxri
 
 use std::{
@@ -32,7 +33,7 @@ impl Redoxri {
 
         let main_file_name = args[0].clone() + ".rs";
 
-        let mcule = Mcule::new("redoxri_script", &args[0])
+        let mut mcule = Mcule::new("redoxri_script", &args[0])
             .with(&[
                 main_file_name.clone().into(),
                 "redoxri.rs".into(),
@@ -42,7 +43,10 @@ impl Redoxri {
                 &main_file_name,
             ]);
 
-        let me = Self {
+        #[cfg(mute_self)]
+        mcule.mute();
+
+        let mut me = Self {
             settings,
             args,
             mcule,
@@ -51,7 +55,7 @@ impl Redoxri {
         me
     }
 
-    pub fn self_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn self_compile(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let args = self.args.clone();
         let main_file_name = args[0].clone() + ".rs";
         let main_file = fs::File::open(&main_file_name)?;
@@ -66,9 +70,15 @@ impl Redoxri {
         println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
 
         #[cfg(unstable)]
-        if self.mcule.check_if_up_to_date() {
+        if !self.mcule.is_up_to_date() {
             self.mcule.compile();
             if self.mcule.status != 0 {
+                #[cfg(unmute_on_fail)]
+                {
+                    self.mcule.unmute();
+                    self.mcule.compile();
+                }
+
                 exit(2)
             }
             self.mcule.run();
@@ -111,6 +121,7 @@ pub struct Mcule {
     recipe: Vec<Vec<String>>,
     last_changed: (),
     pub status: i32,
+    mute: bool,
 }
 
 
@@ -123,6 +134,7 @@ impl Mcule {
             recipe: Vec::new(),
             last_changed: (),
             status: 0,
+            mute: false,
         }
     }
     pub fn with(mut self, inputs: &[Mcule]) -> Self {
@@ -162,7 +174,7 @@ impl Mcule {
         Ok(time)
     }
 
-    pub fn compile(self) -> Self {
+    pub fn compile(&self) -> Self {
         let mut need_to_compile = false;
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
@@ -184,13 +196,15 @@ impl Mcule {
 
         if need_to_compile {
             _ = self.just_compile();
+
+            #[cfg(debug)]
             dbg!(&self);
         }
-        self
+        self.to_owned()
         //Ok(())
     }
 
-    pub fn just_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn just_compile(&self) -> Result<(), i32> {
         let mut recipe = self.recipe.clone();
         for step in &mut recipe {
             let mut cmd = Command::new(step.remove(0));
@@ -198,7 +212,13 @@ impl Mcule {
                 _ = cmd.arg(&command);
             }
             //dbg!(&cmd);
-            _ = cmd.status();
+
+            if self.mute {
+                _ = cmd.output();
+            }
+            else {
+                _ = cmd.status();
+            }
         }
         Ok(())
     }
@@ -219,6 +239,26 @@ impl Mcule {
         _ = fs::copy(self.outpath.clone(), to);
         self
     }
+
+    pub fn run(&self) -> Self {
+        let mut cmd = Command::new(self.outpath.clone());
+        if self.mute {
+            _ = cmd.output();
+        } else {
+            _ = cmd.status();
+        }
+        self.to_owned()
+    }
+
+    pub fn mute(&mut self) -> Self {
+        self.mute = true;
+        self.to_owned()
+    }
+
+    pub fn unmute(&mut self) -> Self {
+        self.mute = false;
+        self.to_owned()
+    }
 }
 
 impl From<&str> for Mcule {
@@ -230,6 +270,7 @@ impl From<&str> for Mcule {
             recipe: Vec::new(),
             last_changed: (),
             status: 0,
+            mute: false,
         }
     }
 }
@@ -243,6 +284,7 @@ impl From<String> for Mcule {
             recipe: Vec::new(),
             last_changed: (),
             status: 0,
+            mute: false,
         }
     }
 }
