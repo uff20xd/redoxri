@@ -121,6 +121,7 @@ pub struct Mcule {
     recipe: Vec<Vec<String>>,
     last_changed: (),
     pub status: i32,
+    status_chain: Vec<i32>,
     mute: bool,
 }
 
@@ -135,6 +136,7 @@ impl Mcule {
             last_changed: (),
             status: 0,
             mute: false,
+            status_chain: Vec::new(),
         }
     }
     pub fn with(mut self, inputs: &[Mcule]) -> Self {
@@ -271,6 +273,7 @@ impl From<&str> for Mcule {
             last_changed: (),
             status: 0,
             mute: false,
+            status_chain: Vec::new(),
         }
     }
 }
@@ -285,6 +288,7 @@ impl From<String> for Mcule {
             last_changed: (),
             status: 0,
             mute: false,
+            status_chain: Vec::new(),
         }
     }
 }
@@ -374,4 +378,7 @@ impl<'a> RustMcule<'a> {
         self.pre_steps.push(pre_step);
         self
     }
+}
+
+mod tja {
 }
