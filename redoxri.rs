@@ -72,7 +72,7 @@ impl Redoxri {
         #[cfg(unstable)]
         if !self.mcule.is_up_to_date() {
             self.mcule.compile();
-            if self.mcule.status != 0 {
+            if !self.mcule.success() {
                 #[cfg(unmute_on_fail)]
                 {
                     self.mcule.unmute();
@@ -120,7 +120,7 @@ pub struct Mcule {
     inputs: Vec<Mcule>,
     recipe: Vec<Vec<String>>,
     last_changed: (),
-    pub status: i32,
+    pub success: bool,
     status_chain: Vec<i32>,
     mute: bool,
 }
@@ -134,7 +134,7 @@ impl Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
-            status: 0,
+            success: true,
             mute: false,
             status_chain: Vec::new(),
         }
@@ -271,7 +271,7 @@ impl From<&str> for Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
-            status: 0,
+            success: true,
             mute: false,
             status_chain: Vec::new(),
         }
@@ -286,7 +286,7 @@ impl From<String> for Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
-            status: 0,
+            success: true,
             mute: false,
             status_chain: Vec::new(),
         }
