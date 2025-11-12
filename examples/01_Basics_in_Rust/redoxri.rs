@@ -72,7 +72,7 @@ impl Redoxri {
         #[cfg(unstable)]
         if !self.mcule.is_up_to_date() {
             self.mcule.compile();
-            if self.mcule.status != 0 {
+            if !self.mcule.success {
                 #[cfg(unmute_on_fail)]
                 {
                     self.mcule.unmute();
@@ -120,7 +120,8 @@ pub struct Mcule {
     inputs: Vec<Mcule>,
     recipe: Vec<Vec<String>>,
     last_changed: (),
-    pub status: i32,
+    pub success: bool,
+    status_chain: Vec<i32>,
     mute: bool,
 }
 
@@ -133,8 +134,13 @@ impl Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
-            status: 0,
+            success: true,
+            #[cfg(mute_on_default)]
+            mute: true,
+
+            #[cfg(not(mute_on_default))]
             mute: false,
+            status_chain: Vec::new(),
         }
     }
     pub fn with(mut self, inputs: &[Mcule]) -> Self {
@@ -174,7 +180,7 @@ impl Mcule {
         Ok(time)
     }
 
-    pub fn compile(&self) -> Self {
+    pub fn compile(&mut self) -> Self {
         let mut need_to_compile = false;
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
@@ -190,12 +196,32 @@ impl Mcule {
                 }
             },
             Err(_) => {
-                _ = self.just_compile();
+                self.status_chain = self.just_compile();
+                let mut success = true;
+                for i in self.status_chain.clone() {
+                    if i != 0 {
+                        success = false;
+                    }
+                }
+                self.success = success;
             },
         };
 
         if need_to_compile {
-            _ = self.just_compile();
+            self.status_chain = self.just_compile();
+            let mut success = true;
+            for i in self.status_chain.clone() {
+                if i != 0 {
+                    success = false;
+                }
+            }
+            self.success = success;
+
+            #[cfg(unmute_on_fail)]
+            if !self.success {
+                self.mute = false;
+                _ = self.just_compile();
+            }
 
             #[cfg(debug)]
             dbg!(&self);
@@ -204,8 +230,9 @@ impl Mcule {
         //Ok(())
     }
 
-    pub fn just_compile(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn just_compile(&self) -> Vec<i32> {
         let mut recipe = self.recipe.clone();
+        let mut output_chain = Vec::new();
         for step in &mut recipe {
             let mut cmd = Command::new(step.remove(0));
             for command in step {
@@ -214,14 +241,35 @@ impl Mcule {
             //dbg!(&cmd);
 
             if self.mute {
-
-                _ = cmd.output();
+                _ = match cmd.output() {
+                    Ok(out) => {
+                        if let Some(excode) = out.status.code() {
+                            output_chain.push(excode);
+                        }
+                        else {output_chain.push(-0x7999_9998_i32);}
+                    },
+                    Err(_) => {
+                        output_chain.push(-0x7999_9997_i32);
+                    }
+                };
             }
             else {
-                _ = cmd.status();
+                _ = match cmd.status() {
+                    Ok(exit_code) => {
+                        if let Some(excode) = exit_code.code() {
+                            output_chain.push(excode);
+                        }
+                        else {output_chain.push(-0x7999_9999_i32);}
+                    },
+                    Err(_) => {
+                        output_chain.push(-0x80000000_i32);
+                    },
+                };
             }
         }
-        Ok(())
+
+        output_chain
+
     }
 
     pub fn add_step(mut self, step: &[&str]) -> Self {
@@ -270,8 +318,9 @@ impl From<&str> for Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
-            status: 0,
+            success: true,
             mute: false,
+            status_chain: Vec::new(),
         }
     }
 }
@@ -284,8 +333,9 @@ impl From<String> for Mcule {
             inputs: Vec::new(),
             recipe: Vec::new(),
             last_changed: (),
-            status: 0,
+            success: true,
             mute: false,
+            status_chain: Vec::new(),
         }
     }
 }
@@ -375,4 +425,7 @@ impl<'a> RustMcule<'a> {
         self.pre_steps.push(pre_step);
         self
     }
+}
+
+mod tja {
 }

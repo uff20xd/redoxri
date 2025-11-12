@@ -5,6 +5,7 @@ use redoxri::*;
 fn main() -> () {
     let _redoxri = Redoxri::new(&[
         // "--cfg", "isolate",
+        "--cfg", "debug",
         "--cfg", "unstable",
         "--cfg", "unmute_on_fail",
         //"--cfg", "mute_self",
