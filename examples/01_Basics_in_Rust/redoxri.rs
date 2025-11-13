@@ -16,7 +16,7 @@ use std::{
 pub type Cmd = Command;
 pub type RxiError = Box<dyn std::error::Error>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Redoxri {
     settings: Vec<String>,
     args: Vec<String>,
@@ -26,25 +26,31 @@ pub struct Redoxri {
 impl Redoxri {
     pub fn new(in_settings: &[&str]) -> Self {
         let args: Vec<String> = std::env::args().collect();
+        let mut compile_step = Vec::new();
+        let main_file_name = args[0].clone() + ".rs";
+        compile_step.push("rustc");
+        compile_step.push(&main_file_name);
+        compile_step.push("--cfg");
+        compile_step.push("bootstrapped");
+
         let mut settings = Vec::new();
         for setting in in_settings {
+            compile_step.push(setting);
             settings.push(setting.to_string());
         }
 
-        let main_file_name = args[0].clone() + ".rs";
 
         let mut mcule = Mcule::new("redoxri_script", &args[0])
             .with(&[
                 main_file_name.clone().into(),
                 "redoxri.rs".into(),
             ])
-            .add_step(&[
-                "rustc", 
-                &main_file_name,
-            ]);
+            .add_step(&compile_step.into_iter().collect::<Vec<&str>>()[..]);
 
         #[cfg(mute_self)]
         mcule.mute();
+
+        dbg!(&mcule);
 
         let mut me = Self {
             settings,
@@ -56,64 +62,73 @@ impl Redoxri {
     }
 
     pub fn self_compile(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let args = self.args.clone();
-        let main_file_name = args[0].clone() + ".rs";
-        let main_file = fs::File::open(&main_file_name)?;
-        let exec_file = fs::File::open(&args[0])?;
 
         #[cfg(isolate)]
         {
-
         }
 
         #[cfg(debug)]
-        println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
+        println!("main_file_name: {}, exec_file_name: {}", main_file_name, self.args[0]);
 
-        #[cfg(unstable)]
-        if !self.mcule.is_up_to_date() {
-            self.mcule.compile();
-            if !self.mcule.success {
-                #[cfg(unmute_on_fail)]
-                {
-                    self.mcule.unmute();
-                    self.mcule.compile();
-                }
+        #[cfg(bootstrapped)]
+        {}
 
-                exit(2)
-            }
-            self.mcule.run();
+        #[cfg(all(not(bootstrapped), not(legacy)))]
+        {
+            self.mcule.report_and_just_compile();
+            //println!("Not Bootstrapped");
         }
 
-        #[cfg(not(unstable))]
-        if main_file.metadata()?.modified()?.elapsed()? < exec_file.metadata()?.modified()?.elapsed()? {
-            let mut compile_command = Command::new("rustc");
-            let _ = compile_command.arg(&main_file_name)
-                .args(&["-o", &args[0]])
-                //.args(COMP_VERSION)
-                .args(&self.settings[..]);
-            //dbg!(&compile_command);
-
-            //#[cfg(verbose)]
-            //let _ = compile_command.status()?;
-
-            //#[cfg(not(verbose))]
-            //dbg!(compile_command.output()?);
-            if !compile_command.output()?.status.success() {
-                compile_command.status()?;
-                exit(2)
+        #[cfg(unstable)]
+        {
+            println!("Here We Go");
+            if !self.mcule.is_up_to_date() {
+                self.mcule.compile();
+                if !self.mcule.is_successful() {
+                    println!("Failed");
+                    exit(2)
+                }
+                self.mcule.run();
             }
+        }
 
-            let mut run_command = Command::new(&args[0]);
+        #[cfg(legacy)]
+        {
+            let args = self.args.clone();
+            let main_file_name = args[0].clone() + ".rs";
+            let main_file = fs::File::open(&main_file_name)?;
+            let exec_file = fs::File::open(&args[0])?;
+            if main_file.metadata()?.modified()?.elapsed()? < exec_file.metadata()?.modified()?.elapsed()? || !cfg!(bootstrapped) {
+                let mut compile_command = Command::new("rustc");
+                let _ = compile_command.arg(&main_file_name)
+                    .args(&["-o", &self.args[0]])
+                    //.args(COMP_VERSION)
+                    .args(&self.settings[..])
+                    .args(&["--cfg", "bootstrapped"]);
+                //dbg!(&compile_command);
 
-            let _ = run_command.status()?;
+                //#[cfg(verbose)]
+                //let _ = compile_command.status()?;
 
-            exit(0)
+                //#[cfg(not(verbose))]
+                //dbg!(compile_command.output()?);
+                if !compile_command.output()?.status.success() {
+                    compile_command.status()?;
+                    exit(2)
+                }
+
+                let mut run_command = Command::new(&self.args[0]);
+
+                let _ = run_command.status()?;
+
+                exit(0)
+            }
         }
         Ok(())
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Mcule {
     name: String,
     outpath: String,
@@ -173,28 +188,33 @@ impl Mcule {
     fn get_comp_date(&self) -> Result<Duration, Box<dyn std::error::Error>> {
         let this_file = fs::File::open(&self.outpath)?;
 
-        #[cfg(debug)]
-        println!("main_file_name: {}, exec_file_name: {}", main_file_name, &args[0]);
-
         let time = this_file.metadata()?.modified()?.elapsed()?;
+        #[cfg(debug)]
+        dbg!(&time);
+
         Ok(time)
     }
 
     pub fn compile(&mut self) -> Self {
         let mut need_to_compile = false;
+
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
                     i.clone().compile();
                     //dbg!(&i);
-                    //dbg!(&time_since_last_change);
                     let comp_date_i = i.get_comp_date().unwrap();
-                    //dbg!(&comp_date_i);
+                    #[cfg(debug)]
+                    {
+                        dbg!(&comp_date_i);
+                        dbg!(&time_since_last_change);
+                    }
                     if comp_date_i < time_since_last_change {
                         need_to_compile = true;
                     }
                 }
             },
+
             Err(_) => {
                 self.status_chain = self.just_compile();
                 let mut success = true;
@@ -208,6 +228,8 @@ impl Mcule {
         };
 
         if need_to_compile {
+            #[cfg(debug)]
+            println!("Compiling {}", &self.outpath);
             self.status_chain = self.just_compile();
             let mut success = true;
             for i in self.status_chain.clone() {
@@ -218,7 +240,7 @@ impl Mcule {
             self.success = success;
 
             #[cfg(unmute_on_fail)]
-            if !self.success {
+            if !self.is_successful() {
                 self.mute = false;
                 _ = self.just_compile();
             }
@@ -240,7 +262,14 @@ impl Mcule {
             }
             //dbg!(&cmd);
 
+            #[cfg(debug)]
+            {
+                dbg!(&self);
+                dbg!(&self.mute);
+            }
+
             if self.mute {
+                println!("mute");
                 _ = match cmd.output() {
                     Ok(out) => {
                         if let Some(excode) = out.status.code() {
@@ -254,6 +283,7 @@ impl Mcule {
                 };
             }
             else {
+                println!("unmute");
                 _ = match cmd.status() {
                     Ok(exit_code) => {
                         if let Some(excode) = exit_code.code() {
@@ -268,8 +298,15 @@ impl Mcule {
             }
         }
 
+        #[cfg(debug)]
+        dbg!(&output_chain);
         output_chain
 
+    }
+
+    fn report_and_just_compile(&mut self) -> Self {
+        self.status_chain = self.just_compile();
+        self.to_owned()
     }
 
     pub fn add_step(mut self, step: &[&str]) -> Self {
@@ -307,6 +344,16 @@ impl Mcule {
     pub fn unmute(&mut self) -> Self {
         self.mute = false;
         self.to_owned()
+    }
+
+    pub fn is_successful(&self) -> bool {
+        let mut success = self.success;
+        for i in self.inputs.clone() {
+            if !i.is_successful() {
+                success = false;
+            }
+        }
+        success
     }
 }
 

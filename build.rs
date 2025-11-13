@@ -5,18 +5,19 @@ use redoxri::*;
 fn main() -> () {
     let _redoxri = Redoxri::new(&[
         // "--cfg", "isolate",
-        "--cfg", "debug",
+        //"--cfg", "debug",
         "--cfg", "unstable",
-        "--cfg", "unmute_on_fail",
+        //"--cfg", "legacy"
+        //"--cfg", "unmute_on_fail",
         //"--cfg", "mute_self",
     ]);
 
     let _main = Mcule::new("redoxri", "./libredoxri.rlib")
         .add_step(&[
-            "rustc", "./redoxri.rs", "--crate-type", "lib",
+            "rustc", "./redoxri.rs", "--crate-type", "lib", "--cfg", "unstable",
         ])
         .with(&["redoxri.rs".into()])
-        .mute()
+        .unmute()
         .compile();
 
     let redoxsrc = Mcule::new("redoxsrc", "./redoxri.rs");
