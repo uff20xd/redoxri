@@ -50,6 +50,7 @@ impl Redoxri {
         #[cfg(mute_self)]
         mcule.mute();
 
+        #[cfg(debug)]
         dbg!(&mcule);
 
         let mut me = Self {
@@ -79,16 +80,21 @@ impl Redoxri {
             //println!("Not Bootstrapped");
         }
 
-        #[cfg(unstable)]
+        #[cfg(not(legacy))]
         {
-            println!("Here We Go");
             if !self.mcule.is_up_to_date() {
+                println!("Detected Change!");
+                println!("Recompiling build script...");
                 self.mcule.compile();
                 if !self.mcule.is_successful() {
-                    println!("Failed");
+                    println!("Recompilation Failed!");
+                    println!("Exiting...");
                     exit(2)
                 }
+                println!("Recompilation Successful!");
+                println!("Executing new build script...");
                 self.mcule.run();
+                exit(0);
             }
         }
 
@@ -105,13 +111,10 @@ impl Redoxri {
                     //.args(COMP_VERSION)
                     .args(&self.settings[..])
                     .args(&["--cfg", "bootstrapped"]);
-                //dbg!(&compile_command);
 
-                //#[cfg(verbose)]
-                //let _ = compile_command.status()?;
+                #[cfg(debug)]
+                dbg!(&compile_command);
 
-                //#[cfg(not(verbose))]
-                //dbg!(compile_command.output()?);
                 if !compile_command.output()?.status.success() {
                     compile_command.status()?;
                     exit(2)
@@ -169,10 +172,7 @@ impl Mcule {
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
-                    //dbg!(&i);
-                    //dbg!(&time_since_last_change);
                     let comp_date_i = i.get_comp_date().unwrap();
-                    //dbg!(&comp_date_i);
                     if comp_date_i < time_since_last_change {
                         return false;
                     }
@@ -189,8 +189,6 @@ impl Mcule {
         let this_file = fs::File::open(&self.outpath)?;
 
         let time = this_file.metadata()?.modified()?.elapsed()?;
-        #[cfg(debug)]
-        dbg!(&time);
 
         Ok(time)
     }
@@ -202,13 +200,7 @@ impl Mcule {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
                     i.clone().compile();
-                    //dbg!(&i);
                     let comp_date_i = i.get_comp_date().unwrap();
-                    #[cfg(debug)]
-                    {
-                        dbg!(&comp_date_i);
-                        dbg!(&time_since_last_change);
-                    }
                     if comp_date_i < time_since_last_change {
                         need_to_compile = true;
                     }
@@ -245,8 +237,6 @@ impl Mcule {
                 _ = self.just_compile();
             }
 
-            #[cfg(debug)]
-            dbg!(&self);
         }
         self.to_owned()
         //Ok(())
@@ -260,16 +250,9 @@ impl Mcule {
             for command in step {
                 _ = cmd.arg(&command);
             }
-            //dbg!(&cmd);
-
-            #[cfg(debug)]
-            {
-                dbg!(&self);
-                dbg!(&self.mute);
-            }
 
             if self.mute {
-                println!("mute");
+                println!("Muted Compilation of: {} {}", &self.name, &self.outpath);
                 _ = match cmd.output() {
                     Ok(out) => {
                         if let Some(excode) = out.status.code() {
@@ -283,7 +266,7 @@ impl Mcule {
                 };
             }
             else {
-                println!("unmute");
+                //println!("unmute");
                 _ = match cmd.status() {
                     Ok(exit_code) => {
                         if let Some(excode) = exit_code.code() {
@@ -297,9 +280,9 @@ impl Mcule {
                 };
             }
         }
-
         #[cfg(debug)]
-        dbg!(&output_chain);
+        dbg!(&mcule);
+
         output_chain
 
     }

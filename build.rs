@@ -4,11 +4,11 @@ use redoxri::*;
 
 fn main() -> () {
     let _redoxri = Redoxri::new(&[
-        // "--cfg", "isolate",
+        //"--cfg", "isolate",
         //"--cfg", "debug",
-        "--cfg", "unstable",
+        //"--cfg", "unstable",
         //"--cfg", "legacy"
-        //"--cfg", "unmute_on_fail",
+        "--cfg", "unmute_on_fail",
         //"--cfg", "mute_self",
     ]);
 
