@@ -19,7 +19,7 @@ pub type RxiError = Box<dyn std::error::Error>;
 #[derive(Clone, Debug)]
 pub struct Redoxri {
     settings: Vec<String>,
-    args: Vec<String>,
+    pub args: Vec<String>,
     mcule: Mcule,
 }
 
@@ -338,6 +338,9 @@ impl Mcule {
         }
         success
     }
+    pub fn clean(self) {
+        dbg!(self);
+    }
 }
 
 impl From<&str> for Mcule {
@@ -367,6 +370,15 @@ impl From<String> for Mcule {
             mute: false,
             status_chain: Vec::new(),
         }
+    }
+}
+
+#[macro_export]
+macro_rules! clean {
+    ($($mcule:ident),+) => {
+        $(
+            $mcule.clean();
+        )+
     }
 }
 

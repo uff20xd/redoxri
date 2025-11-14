@@ -12,17 +12,28 @@ fn main() -> () {
         //"--cfg", "mute_self",
     ]);
 
-    let _main = Mcule::new("redoxri", "./libredoxri.rlib")
+    let main = Mcule::new("redoxri", "./libredoxri.rlib")
         .add_step(&[
-            "rustc", "./redoxri.rs", "--crate-type", "lib", "--cfg", "unstable",
+            "rustc", "./redoxri.rs", "--crate-type", "lib",  
         ])
         .with(&["redoxri.rs".into()])
-        .unmute()
         .compile();
 
     let redoxsrc = Mcule::new("redoxsrc", "./redoxri.rs");
 
     redoxsrc.copy_to("./examples/01_Basics_in_Rust/redoxri.rs");
+    main.clone().clean();
+
+    clean!(main, redoxsrc);
 
     println!("!");
+}
+    
+#[macro_export]
+macro_rules! clean {
+    ($($mcule:ident),+) => {
+        $(
+            $mcule.clean();
+        )+
+    }
 }
