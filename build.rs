@@ -24,16 +24,6 @@ fn main() -> () {
     redoxsrc.copy_to("./examples/01_Basics_in_Rust/redoxri.rs");
     main.clone().clean();
 
-    clean!(main, redoxsrc);
-
     println!("!");
 }
     
-#[macro_export]
-macro_rules! clean {
-    ($($mcule:ident),+) => {
-        $(
-            $mcule.clean();
-        )+
-    }
-}
