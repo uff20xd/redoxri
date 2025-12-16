@@ -11,6 +11,9 @@ use std::{
     time::{
         Duration,
     },
+    path::{
+        Path,
+    },
 };
 
 pub type Cmd = Command;
@@ -39,7 +42,6 @@ impl Redoxri {
             settings.push(setting.to_string());
         }
 
-
         let mut mcule = Mcule::new("redoxri_script", &args[0])
             .with(&[
                 main_file_name.clone().into(),
@@ -60,6 +62,27 @@ impl Redoxri {
         };
         _ = me.self_compile();
         me
+    }
+
+    fn parse_args_to_settings(args: &Vec<&str>, settings: &mut Vec<&str>) {
+        let start_index = 1;
+        let setting = match args[start_index] {
+            "rebuild" => {"rebuild_all"},
+            "self" => {"self_build"},
+            "clean" => {"clean"},
+            "get" => {"get_pkgs"},
+            _ => {""},
+        };
+        if setting != "" { settings.push("--cfg"); settings.push(setting); }
+    }
+
+    fn clean(&mut self) -> Result<(), RxiError> {
+
+        Ok(())
+    }
+
+    pub fn get_info() -> Vec<(bool, Box<Path>)> {
+        todo!("Implement a way to get all mcules into the output form")
     }
 
     pub fn self_compile(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -146,21 +169,67 @@ pub struct Mcule {
 
 impl Mcule {
     pub fn new(name: &str, outpath: &str) -> Self {
-        Self {
-            name: name.to_owned(),
-            outpath: outpath.to_owned(),
-            inputs: Vec::new(),
-            recipe: Vec::new(),
-            last_changed: (),
-            success: true,
+        #[cfg(isolate)]
+        let outpath = "out/".to_owned() + outpath;
+
+        #[cfg(not(isolate))]
+        let outpath = outpath.to_owned();
+
+
+        Self::raw (
+            // Generators
+            true,
+
+            // Name
+            name.to_owned(),
+
+            // Outpath
+            outpath,
+
+            // Inputs
+            Vec::new(),
+
+            // Recipe
+            Vec::new(),
+
+            // Last changed here
+
+            // Success
+            true,
+
+            // Mute
             #[cfg(mute_on_default)]
-            mute: true,
+            true,
 
             #[cfg(not(mute_on_default))]
-            mute: false,
-            status_chain: Vec::new(),
+            false,
+
+            // Status chain
+            Vec::new(),
+        )
+    }
+    pub fn raw(
+        generator: bool,
+        name: String,
+        outpath: String,
+        inputs: Vec<Mcule>,
+        recipe: Vec<Vec<String>>,
+        success: bool,
+        mute: bool,
+        status_chain: Vec<i32>,
+    ) -> Self {
+        Self {
+            name,
+            outpath,
+            inputs,
+            recipe,
+            last_changed: (),
+            success,
+            mute,
+            status_chain,
         }
     }
+
     pub fn with(mut self, inputs: &[Mcule]) -> Self {
         for i in inputs {
             self.inputs.push(i.clone());
@@ -208,14 +277,7 @@ impl Mcule {
             },
 
             Err(_) => {
-                self.status_chain = self.just_compile();
-                let mut success = true;
-                for i in self.status_chain.clone() {
-                    if i != 0 {
-                        success = false;
-                    }
-                }
-                self.success = success;
+                need_to_compile = true;
             },
         };
 
@@ -373,6 +435,15 @@ impl From<String> for Mcule {
     }
 }
 
+#[macro_export]
+macro_rules! clean {
+    ($($mcule:ident),+) => {
+        $(
+            $mcule.clean();
+        )+
+    }
+}
+
 pub struct CMcule {
     file: String,
     deps: (),
@@ -405,7 +476,7 @@ impl<'a> RustMcule<'a> {
             name, 
             crate_type: RustCrateType::Lib,
             outpath: "".to_owned(),
-            src: ".".to_owned(),
+            src: "src".to_owned(),
             root: root.to_owned(),
             file: "main.rs".to_owned(),
             deps: Vec::new(),
