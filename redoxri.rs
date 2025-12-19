@@ -42,6 +42,8 @@ impl Redoxri {
             settings.push(setting.to_string());
         }
 
+        Self::parse_args_to_settings(&args, &mut settings);
+
         let mut mcule = Mcule::new("redoxri_script", &args[0])
             .with(&[
                 main_file_name.clone().into(),
@@ -265,6 +267,8 @@ impl Mcule {
     pub fn compile(&mut self) -> Self {
         let mut need_to_compile = false;
 
+        #[cfg(not(get_pkgs))]
+        #[cfg(not(clean))]
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
@@ -280,6 +284,12 @@ impl Mcule {
                 need_to_compile = true;
             },
         };
+
+        #[cfg(clean)]
+        if self.generator {
+            let file_to_delete = Path::new(&self.outpath);
+
+        }
 
         if need_to_compile {
             #[cfg(debug)]
