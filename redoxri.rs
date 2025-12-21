@@ -47,7 +47,6 @@ impl Redoxri {
         }
 
         if args.len() > 1 {
-            dbg!(&settings);
             Self::parse_args_to_settings(&args, &mut settings);
             force_compile = true;
         }
@@ -65,9 +64,6 @@ impl Redoxri {
 
         #[cfg(mute_self)]
         mcule.mute();
-
-        #[cfg(debug)]
-        dbg!(&mcule);
 
         let mut me = Self {
             settings,
@@ -100,13 +96,10 @@ impl Redoxri {
         {
         }
 
-        #[cfg(debug)]
-        println!("main_file_name: {}, exec_file_name: {}", main_file_name, self.args[0]);
-
         #[cfg(clean)]
         {
+            self.mcule.mute();
             self.mcule.report_and_just_compile();
-            println!("Cleaning Finished!");
         }
 
         #[cfg(not(bootstrapped))]
@@ -114,12 +107,16 @@ impl Redoxri {
             self.mcule.report_and_just_compile();
             //println!("Not Bootstrapped");
         }
+
         if always_compile {
-            dbg!(&self.mcule);
+            self.mcule.mute();
             self.mcule.report_and_just_compile();
+            self.mcule.unmute();
             self.mcule.run();
+            exit(0)
         }
 
+        #[cfg(not(clean))]
         if !self.mcule.is_up_to_date() && !always_compile {
             println!("Detected Change!");
             println!("Recompiling build script...");
@@ -152,28 +149,23 @@ pub struct Mcule {
 
 
 impl Mcule {
-    pub fn new(name: &str, outpath: &str) -> Self {
-        if outpath[0..1] == *"/" {
+    pub fn new<T, A>(name: &T, outpath: &A) -> Self 
+    where T: ?Sized + AsRef<str> + Debug,
+    A: ?Sized + AsRef<str> + Debug {
+        if outpath.as_ref()[0..1] == *"/" {
             panic!("Please dont use absolute paths as the Outpath of a generative Mcule, as it destroys compatibility!
-In Mcule: {}; with outpath: {}", name, outpath);
+In Mcule: {}; with outpath: {}", name.as_ref(), outpath.as_ref());
         }
 
         #[cfg(isolate)]
-        let outpath = "./out/".to_owned() + outpath;
+        let outpath = "./out/".to_owned() + outpath.as_ref();
 
         #[cfg(not(isolate))]
-        let outpath = "./".to_owned() + outpath;
-
-
-        #[cfg(clean)]
-        {
-            let file_to_delete = Path::new(&outpath);
-            if file_to_delete.is_file() { dbg!(file_to_delete) }
-        }
+        let outpath = "./".to_owned() + outpath.as_ref();
 
         Self::raw (
             // Name
-            name.to_owned(),
+            name.as_ref().to_owned(),
 
             // Outpath
             outpath,
@@ -256,8 +248,6 @@ In Mcule: {}; with outpath: {}", name, outpath);
     pub fn compile(&mut self) -> Self {
         let mut need_to_compile = false;
 
-        #[cfg(not(get_pkgs))]
-        #[cfg(not(clean))]
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
@@ -274,6 +264,20 @@ In Mcule: {}; with outpath: {}", name, outpath);
             },
         };
 
+
+        #[cfg(clean)]
+        {
+            if self.recipe.len() == 0 { return self.to_owned(); }
+            let file_to_delete = Path::new(&self.outpath);
+            if file_to_delete.is_file() {
+                println!("Cleaning: {} at {}", &self.name, &self.outpath);
+                fs::remove_file(file_to_delete).unwrap();
+            }
+            return self.to_owned();
+        }
+
+
+        #[cfg(not(clean))]
         if need_to_compile {
             #[cfg(debug)]
             println!("Compiling {}", &self.outpath);
@@ -335,9 +339,6 @@ In Mcule: {}; with outpath: {}", name, outpath);
                 };
             }
         }
-        #[cfg(debug)]
-        dbg!(&mcule);
-
         output_chain
 
     }
