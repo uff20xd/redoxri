@@ -137,12 +137,12 @@ impl Redoxri {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Mcule {
-    name: String,
-    outpath: String,
+    pub name: String,
+    pub outpath: String,
     inputs: Vec<Mcule>,
     recipe: Vec<Vec<String>>,
     last_changed: (),
-    pub success: bool,
+    success: bool,
     status_chain: Vec<i32>,
     mute: bool,
 }
@@ -386,6 +386,7 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath.as_ref());
         self.to_owned()
     }
 
+    #[inline(always)]
     pub fn is_successful(&self) -> bool {
         let mut success = self.success;
         for i in self.inputs.clone() {
