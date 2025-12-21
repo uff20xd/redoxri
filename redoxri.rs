@@ -168,7 +168,7 @@ In Mcule: {}; with outpath: {}", name, outpath);
         #[cfg(clean)]
         {
             let file_to_delete = Path::new(&outpath);
-            if file_to_delete.is_file() {fs::remove_file(file_to_delete).unwrap() }
+            if file_to_delete.is_file() { dbg!(file_to_delete) }
         }
 
         Self::raw (
