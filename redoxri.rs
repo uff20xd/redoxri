@@ -14,6 +14,9 @@ use std::{
     path::{
         Path,
     },
+    fmt::{
+        Debug
+    },
 };
 
 pub type Cmd = Command;
@@ -27,10 +30,12 @@ pub struct Redoxri {
 }
 
 impl Redoxri {
-    pub fn new(in_settings: &[&str]) -> Self {
+    pub fn new<T>(in_settings: &[&T]) -> Self 
+    where T: ?Sized + AsRef<str> + Debug {
         let args: Vec<String> = std::env::args().collect();
-        let mut compile_step = Vec::new();
+        let mut compile_step: Vec<&str> = Vec::new();
         let main_file_name = args[0].clone() + ".rs";
+        let mut force_compile = false;
         compile_step.push("rustc");
         compile_step.push(&main_file_name);
         compile_step.push("--cfg");
@@ -38,18 +43,25 @@ impl Redoxri {
 
         let mut settings = Vec::new();
         for setting in in_settings {
-            compile_step.push(setting);
-            settings.push(setting.to_string());
+            settings.push(setting.as_ref().to_string());
         }
 
-        Self::parse_args_to_settings(&args, &mut settings);
+        if args.len() > 1 {
+            dbg!(&settings);
+            Self::parse_args_to_settings(&args, &mut settings);
+            force_compile = true;
+        }
+
+        for setting in &settings {
+            compile_step.push(setting);
+        }
 
         let mut mcule = Mcule::new("redoxri_script", &args[0])
             .with(&[
                 main_file_name.clone().into(),
                 "redoxri.rs".into(),
             ])
-            .add_step(&compile_step.into_iter().collect::<Vec<&str>>()[..]);
+            .add_step(&compile_step[..]);
 
         #[cfg(mute_self)]
         mcule.mute();
@@ -62,32 +74,27 @@ impl Redoxri {
             args,
             mcule,
         };
-        _ = me.self_compile();
+        _ = me.self_compile(force_compile);
         me
     }
 
-    fn parse_args_to_settings(args: &Vec<&str>, settings: &mut Vec<&str>) {
+    fn parse_args_to_settings(args: &Vec<String>, settings: &mut Vec<String>) {
         let start_index = 1;
-        let setting = match args[start_index] {
+        let setting = match args[start_index].as_str() {
             "rebuild" => {"rebuild_all"},
             "self" => {"self_build"},
             "clean" => {"clean"},
             "get" => {"get_pkgs"},
             _ => {""},
         };
-        if setting != "" { settings.push("--cfg"); settings.push(setting); }
-    }
-
-    fn clean(&mut self) -> Result<(), RxiError> {
-
-        Ok(())
+        if setting != "" { settings.push("--cfg".to_owned()); settings.push(setting.to_owned()) }
     }
 
     pub fn get_info() -> Vec<(bool, Box<Path>)> {
         todo!("Implement a way to get all mcules into the output form")
     }
 
-    pub fn self_compile(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn self_compile(&mut self, always_compile: bool) -> Result<(), Box<dyn std::error::Error>> {
 
         #[cfg(isolate)]
         {
@@ -96,61 +103,36 @@ impl Redoxri {
         #[cfg(debug)]
         println!("main_file_name: {}, exec_file_name: {}", main_file_name, self.args[0]);
 
-        #[cfg(bootstrapped)]
-        {}
+        #[cfg(clean)]
+        {
+            self.mcule.report_and_just_compile();
+            println!("Cleaning Finished!");
+        }
 
-        #[cfg(all(not(bootstrapped), not(legacy)))]
+        #[cfg(not(bootstrapped))]
         {
             self.mcule.report_and_just_compile();
             //println!("Not Bootstrapped");
         }
-
-        #[cfg(not(legacy))]
-        {
-            if !self.mcule.is_up_to_date() {
-                println!("Detected Change!");
-                println!("Recompiling build script...");
-                self.mcule.compile();
-                if !self.mcule.is_successful() {
-                    println!("Recompilation Failed!");
-                    println!("Exiting...");
-                    exit(2)
-                }
-                println!("Recompilation Successful!");
-                println!("Executing new build script...");
-                self.mcule.run();
-                exit(0);
-            }
+        if always_compile {
+            dbg!(&self.mcule);
+            self.mcule.report_and_just_compile();
+            self.mcule.run();
         }
 
-        #[cfg(legacy)]
-        {
-            let args = self.args.clone();
-            let main_file_name = args[0].clone() + ".rs";
-            let main_file = fs::File::open(&main_file_name)?;
-            let exec_file = fs::File::open(&args[0])?;
-            if main_file.metadata()?.modified()?.elapsed()? < exec_file.metadata()?.modified()?.elapsed()? || !cfg!(bootstrapped) {
-                let mut compile_command = Command::new("rustc");
-                let _ = compile_command.arg(&main_file_name)
-                    .args(&["-o", &self.args[0]])
-                    //.args(COMP_VERSION)
-                    .args(&self.settings[..])
-                    .args(&["--cfg", "bootstrapped"]);
-
-                #[cfg(debug)]
-                dbg!(&compile_command);
-
-                if !compile_command.output()?.status.success() {
-                    compile_command.status()?;
-                    exit(2)
-                }
-
-                let mut run_command = Command::new(&self.args[0]);
-
-                let _ = run_command.status()?;
-
-                exit(0)
+        if !self.mcule.is_up_to_date() && !always_compile {
+            println!("Detected Change!");
+            println!("Recompiling build script...");
+            self.mcule.compile();
+            if !self.mcule.is_successful() {
+                println!("Recompilation Failed!");
+                println!("Exiting...");
+                exit(2)
             }
+            println!("Recompilation Successful!");
+            println!("Executing new build script...");
+            self.mcule.run();
+            exit(0);
         }
         Ok(())
     }
@@ -171,17 +153,25 @@ pub struct Mcule {
 
 impl Mcule {
     pub fn new(name: &str, outpath: &str) -> Self {
+        if outpath[0..1] == *"/" {
+            panic!("Please dont use absolute paths as the Outpath of a generative Mcule, as it destroys compatibility!
+In Mcule: {}; with outpath: {}", name, outpath);
+        }
+
         #[cfg(isolate)]
-        let outpath = "out/".to_owned() + outpath;
+        let outpath = "./out/".to_owned() + outpath;
 
         #[cfg(not(isolate))]
-        let outpath = outpath.to_owned();
+        let outpath = "./".to_owned() + outpath;
 
+
+        #[cfg(clean)]
+        {
+            let file_to_delete = Path::new(&outpath);
+            if file_to_delete.is_file() {fs::remove_file(file_to_delete).unwrap() }
+        }
 
         Self::raw (
-            // Generators
-            true,
-
             // Name
             name.to_owned(),
 
@@ -211,7 +201,6 @@ impl Mcule {
         )
     }
     pub fn raw(
-        generator: bool,
         name: String,
         outpath: String,
         inputs: Vec<Mcule>,
@@ -284,12 +273,6 @@ impl Mcule {
                 need_to_compile = true;
             },
         };
-
-        #[cfg(clean)]
-        if self.generator {
-            let file_to_delete = Path::new(&self.outpath);
-
-        }
 
         if need_to_compile {
             #[cfg(debug)]
@@ -364,13 +347,14 @@ impl Mcule {
         self.to_owned()
     }
 
-    pub fn add_step(mut self, step: &[&str]) -> Self {
+    pub fn add_step<T>(mut self, step: &[&T]) -> Self 
+    where T: ?Sized + AsRef<str> + Debug {
         let mut new_step: Vec<String> = Vec::new();
         for arg in step {
-            if *arg == "$out" {
+            if arg.as_ref() == "$out" {
                 new_step.push(self.outpath.clone());
             }
-            else {new_step.push(arg.to_string());}
+            else {new_step.push(arg.as_ref().to_string());}
         }
         self.recipe.push(new_step);
         self
@@ -410,9 +394,6 @@ impl Mcule {
         }
         success
     }
-    pub fn clean(self) {
-        dbg!(self);
-    }
 }
 
 impl From<&str> for Mcule {
@@ -442,15 +423,6 @@ impl From<String> for Mcule {
             mute: false,
             status_chain: Vec::new(),
         }
-    }
-}
-
-#[macro_export]
-macro_rules! clean {
-    ($($mcule:ident),+) => {
-        $(
-            $mcule.clean();
-        )+
     }
 }
 
@@ -531,10 +503,11 @@ impl<'a> RustMcule<'a> {
         self
     }
 
-    pub fn add_pre_step(&mut self, step: &[&'a str]) -> &mut Self {
+    pub fn add_pre_step<T>(&mut self, step: &[&T]) -> &mut Self 
+    where T: ?Sized + AsRef<str> + Debug {
         let mut pre_step = Vec::new();
         for i in step {
-            pre_step.push(i.to_string());
+            pre_step.push(i.as_ref().to_string());
         }
         self.pre_steps.push(pre_step);
         self
