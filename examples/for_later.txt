@@ -1,0 +1,18 @@
+
+
+        let outpath = outpath.as_ref().to_owned();
+
+        if &outpath[0..1] == "/" {
+            panic!("Please dont use absolute paths as the Outpath of a generative Mcule, as it destroys compatibility!
+In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
+        }
+
+        #[cfg(isolate)]
+        if &outpath[0..2] != "./out" {
+            outpath = "./out/".to_owned() + &outpath;
+        }
+
+        #[cfg(not(isolate))]
+        if &outpath[0..2] != "./" {
+            outpath = "./".to_owned() + &outpath;
+        }

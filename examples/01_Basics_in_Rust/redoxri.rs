@@ -263,6 +263,8 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
                     i.clone().compile();
                     let comp_date_i = i.get_comp_date().unwrap();
                     if comp_date_i < time_since_last_change {
+                        dbg!(&comp_date_i);
+                        dbg!(&time_since_last_change);
                         need_to_compile = true;
                     }
                 }
