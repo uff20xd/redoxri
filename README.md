@@ -1,6 +1,11 @@
 # RedOxRI
 The new (and maybe improved) version of redoxr! The (Rust) Build system for slightly odd people (just me).
 
+# IMPORTANT
+Self Rebuilds currently arent functional!!!
+Infinite Loop 
+Not Compiling 
+
 ## TODOS
 1. Implement a keep function that forces compilation, while still using compile function and its upsides
 2. Maybe someday update CMcule and RustMcule
