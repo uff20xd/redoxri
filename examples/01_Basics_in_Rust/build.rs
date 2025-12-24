@@ -3,14 +3,12 @@ use redoxri::*;
 
 fn main() -> () {
     let redoxri = Redoxri::new(&[
+        "--cfg"
     ]);
 
-    let main = Mcule::new("fibonacci", "fibonacci.rlib")
+    let main = Mcule::new("fibonacci", "fibonacci")
         .with(&["fibonacci.rs".into()])
-        .add_step(&["rustc", "fibonacci.rs", "-o", "$out", "--crate-type=lib"])
-        .compile();
-
-
-    if redoxri.flags.contains("--clean") { 
-    }
+        .add_step(&["rustc", "fibonacci.rs", "-o", "$out"])
+        .compile()
+        .run();
 }

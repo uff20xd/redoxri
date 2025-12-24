@@ -128,6 +128,7 @@ impl Redoxri {
             }
             println!("Recompilation Successful!");
             println!("Executing new build script...");
+            dbg!(&self.mcule);
             self.mcule.run();
             exit(0);
         }
@@ -152,16 +153,23 @@ impl Mcule {
     pub fn new<T, A>(name: &T, outpath: &A) -> Self 
     where T: ?Sized + AsRef<str> + Debug,
     A: ?Sized + AsRef<str> + Debug {
-        if outpath.as_ref()[0..1] == *"/" {
+
+        let mut outpath = outpath.as_ref().to_owned();
+
+        if &outpath[0..1] == "/" {
             panic!("Please dont use absolute paths as the Outpath of a generative Mcule, as it destroys compatibility!
-In Mcule: {}; with outpath: {}", name.as_ref(), outpath.as_ref());
+In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
         }
 
         #[cfg(isolate)]
-        let outpath = "./out/".to_owned() + outpath.as_ref();
+        if &outpath[0..2] != "./out" {
+            outpath = "./out/".to_owned() + &outpath;
+        }
 
         #[cfg(not(isolate))]
-        let outpath = "./".to_owned() + outpath.as_ref();
+        if &outpath[0..2] != "./" {
+            outpath = "./".to_owned() + &outpath;
+        }
 
         Self::raw (
             // Name
@@ -248,6 +256,7 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath.as_ref());
     pub fn compile(&mut self) -> Self {
         let mut need_to_compile = false;
 
+        #[cfg(not_clean)]
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
@@ -441,23 +450,23 @@ pub enum RustCrateType {
     Empty,
 }
 
-pub struct RustMcule<'a> {
-    name: &'a str,
+pub struct RustMcule {
+    name: String,
     crate_type: RustCrateType,
     outpath: String,
     src: String,
     root: String,
     file: String,
-    flags: Vec<&'a str>,
+    flags: Vec<String>,
     deps: Vec<Mcule>,
     pre_steps: Vec<Vec<String>>,
     post_steps: Vec<Vec<String>>,
 }
 
-impl<'a> RustMcule<'a> {
-    pub fn new(name: &'a str, root: &str) -> Self {
+impl RustMcule {
+    pub fn new(name: &str, root: &str) -> Self {
         Self {
-            name, 
+            name: name.to_owned(), 
             crate_type: RustCrateType::Lib,
             outpath: "".to_owned(),
             src: "src".to_owned(),
