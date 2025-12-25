@@ -17,10 +17,16 @@ use std::{
     fmt::{
         Debug
     },
+    sync::atomic::{
+        AtomicBool,
+        Ordering,
+    },
 };
 
 pub type Cmd = Command;
 pub type RxiError = Box<dyn std::error::Error>;
+
+static mut FULL_MUTE: bool = false;
 
 #[derive(Clone, Debug)]
 pub struct Redoxri {
@@ -116,7 +122,9 @@ impl Redoxri {
 
         if always_compile {
             self.mcule.mute();
+            unsafe { FULL_MUTE = true; }
             self.mcule.report_and_just_compile();
+            unsafe { FULL_MUTE = false; }
             self.mcule.unmute();
             self.mcule.required_run();
             exit(0)
@@ -325,7 +333,9 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
             }
 
             if self.mute {
-                println!("Muted Compilation of: {} {}", &self.name, &self.outpath);
+                unsafe { if !FULL_MUTE {
+                    println!("Muted Compilation of: {} {}", &self.name, &self.outpath);
+                } }
                 _ = match cmd.output() {
                     Ok(out) => {
                         if let Some(excode) = out.status.code() {
