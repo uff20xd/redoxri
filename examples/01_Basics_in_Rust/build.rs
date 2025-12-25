@@ -2,9 +2,7 @@ mod redoxri;
 use redoxri::*;
 
 fn main() -> () {
-    let redoxri = Redoxri::new(&[
-        "--cfg"
-    ]);
+    let redoxri = Redoxri::new(&[""]);
 
     let main = Mcule::new("fibonacci", "fibonacci")
         .with(&["fibonacci.rs".into()])
