@@ -17,10 +17,6 @@ use std::{
     fmt::{
         Debug
     },
-    sync::atomic::{
-        AtomicBool,
-        Ordering,
-    },
 };
 
 pub type Cmd = Command;
