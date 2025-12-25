@@ -2,11 +2,13 @@ mod redoxri;
 use redoxri::*;
 
 fn main() -> () {
-    let redoxri = Redoxri::new(&[""]);
+    let _redoxri = Redoxri::new(&[""]);
 
-    let main = Mcule::new("fibonacci", "fibonacci")
-        .with(&["fibonacci.rs".into()])
-        .add_step(&["rustc", "fibonacci.rs", "-o", "$out"])
+    let main_src = Mcule::new("main_src", "src/main.rs");
+
+    let _main = Mcule::new("fibonacci", "fibonacci")
+        .with(&[main_src.clone()])
+        .add_step(&["rustc", &main_src.outpath, "-o", "$out"])
         .compile()
         .run();
 }
