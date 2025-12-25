@@ -104,9 +104,10 @@ impl Redoxri {
         {
         }
 
-        #[cfg(clean)]
+        #[cfg(any(clean, run))]
         {
             self.mcule.mute();
+            unsafe { FULL_MUTE = true; }
             self.mcule.report_and_just_compile();
         }
 
