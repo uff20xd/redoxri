@@ -43,12 +43,13 @@ impl Redoxri {
 
         let mut settings = Vec::new();
         for setting in in_settings {
-            settings.push(setting.as_ref().to_string());
+            if setting.as_ref() != "" {
+                settings.push(setting.as_ref().to_string());
+            }
         }
 
         if args.len() > 1 {
-            Self::parse_args_to_settings(&args, &mut settings);
-            force_compile = true;
+            if Self::parse_args_to_settings(&args, &mut settings) {force_compile = true}
         }
 
         for setting in &settings {
@@ -74,16 +75,21 @@ impl Redoxri {
         me
     }
 
-    fn parse_args_to_settings(args: &Vec<String>, settings: &mut Vec<String>) {
+    fn parse_args_to_settings(args: &Vec<String>, settings: &mut Vec<String>) -> bool{
         let start_index = 1;
         let setting = match args[start_index].as_str() {
             "rebuild" => {"rebuild_all"},
             "self" => {"self_build"},
             "clean" => {"clean"},
             "get" => {"get_pkgs"},
+            "run" => {"run"},
             _ => {""},
         };
-        if setting != "" { settings.push("--cfg".to_owned()); settings.push(setting.to_owned()) }
+        if setting != "" { 
+            settings.push("--cfg".to_owned()); settings.push(setting.to_owned());
+            return true;
+        }
+        false
     }
 
     pub fn get_info() -> Vec<(bool, Box<Path>)> {
@@ -112,7 +118,7 @@ impl Redoxri {
             self.mcule.mute();
             self.mcule.report_and_just_compile();
             self.mcule.unmute();
-            self.mcule.run();
+            self.mcule.required_run();
             exit(0)
         }
 
@@ -120,7 +126,7 @@ impl Redoxri {
         if !self.mcule.is_up_to_date() && !always_compile {
             println!("Detected Change!");
             println!("Recompiling build script...");
-            self.mcule.compile();
+            self.mcule.report_and_just_compile();
             if !self.mcule.is_successful() {
                 println!("Recompilation Failed!");
                 println!("Exiting...");
@@ -128,8 +134,7 @@ impl Redoxri {
             }
             println!("Recompilation Successful!");
             println!("Executing new build script...");
-            dbg!(&self.mcule);
-            self.mcule.run();
+            self.mcule.required_run();
             exit(0);
         }
         Ok(())
@@ -256,15 +261,13 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
     pub fn compile(&mut self) -> Self {
         let mut need_to_compile = false;
 
-        #[cfg(not_clean)]
+        #[cfg(not(clean))]
         let _last_change = match self.get_comp_date() {
             Ok(time_since_last_change) => {
                 for i in &self.inputs {
                     i.clone().compile();
                     let comp_date_i = i.get_comp_date().unwrap();
                     if comp_date_i < time_since_last_change {
-                        dbg!(&comp_date_i);
-                        dbg!(&time_since_last_change);
                         need_to_compile = true;
                     }
                 }
@@ -356,6 +359,19 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
 
     fn report_and_just_compile(&mut self) -> Self {
         self.status_chain = self.just_compile();
+        let mut success = true;
+        for i in self.status_chain.clone() {
+            if i != 0 {
+                success = false;
+            }
+        }
+        self.success = success;
+
+        #[cfg(unmute_on_fail)]
+        if !self.is_successful() {
+            self.mute = false;
+            _ = self.just_compile();
+        }
         self.to_owned()
     }
 
@@ -377,12 +393,24 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
         self
     }
 
-    pub fn run(&self) -> Self {
+    pub fn required_run(&self) -> Self {
         let mut cmd = Command::new(self.outpath.clone());
         if self.mute {
             _ = cmd.output();
         } else {
             _ = cmd.status();
+        }
+        self.to_owned()
+    }
+
+    pub fn run(&self) -> Self {
+        if cfg!(run) {
+            let mut cmd = Command::new(self.outpath.clone());
+            if self.mute {
+                _ = cmd.output();
+            } else {
+                _ = cmd.status();
+            }
         }
         self.to_owned()
     }
