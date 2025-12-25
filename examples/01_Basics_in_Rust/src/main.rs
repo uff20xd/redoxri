@@ -1,5 +1,5 @@
 fn main() {
-    let n = 0;
+    let n = 150;
     println!("{n}! is {}", fibonacci(n))
 }
 
