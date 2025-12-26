@@ -173,6 +173,10 @@ impl Redoxri {
         }
         Ok(())
     }
+    pub fn flag_is_active<T>(flag: &T) -> bool 
+    where T: AsRef<str> + ?Sized {
+        return RedoxConfig::flag_is_active(flag);
+    }
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
