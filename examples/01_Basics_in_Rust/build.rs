@@ -11,6 +11,7 @@ fn main() -> () {
 
     let main_src = Mcule::new("main_src", "src/main.rs");
 
+
     let _main = Mcule::new("fibonacci", "out/fibonacci")
         .with(&[main_src.clone()])
         .add_step(&["rustc", &main_src.outpath, "-o", "$out"])

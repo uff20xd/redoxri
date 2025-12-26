@@ -152,7 +152,7 @@ impl Redoxri {
             self.mcule.report_and_just_compile();
             unsafe { FULL_MUTE = false; }
             self.mcule.unmute();
-            self.mcule.required_run();
+            self.mcule.required_run_with(&self.args[1..]);
             exit(0)
         }
 
@@ -167,7 +167,7 @@ impl Redoxri {
             }
             println!("Recompilation Successful!");
             println!("Executing new build script...");
-            self.mcule.required_run();
+            self.mcule.required_run_with(&self.args[1..]);
             exit(0);
         }
         Ok(())
@@ -443,6 +443,37 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
     pub fn run(&self) -> Self {
         if RedoxConfig::flag_is_active("run") {
             let mut cmd = Command::new(self.outpath.clone());
+            if self.mute {
+                _ = cmd.output();
+            } else {
+                _ = cmd.status();
+            }
+        }
+        self.to_owned()
+    }
+
+    pub fn required_run_with<T>(&self, args: &[T]) -> Self 
+    where T: AsRef<str> {
+        let mut cmd = Command::new(self.outpath.clone());
+        for i in args {
+            cmd.arg(i.as_ref());
+
+        }
+        if self.mute {
+            _ = cmd.output();
+        } else {
+            _ = cmd.status();
+        }
+        self.to_owned()
+    }
+
+    pub fn run_with<T>(&self, args: &[T]) -> Self 
+    where T: AsRef<str> {
+        if RedoxConfig::flag_is_active("run") {
+            let mut cmd = Command::new(self.outpath.clone());
+            for i in args {
+                cmd.arg(i.as_ref());
+            }
             if self.mute {
                 _ = cmd.output();
             } else {
