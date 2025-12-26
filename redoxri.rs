@@ -156,8 +156,7 @@ impl Redoxri {
             exit(0)
         }
 
-        #[cfg(not(clean))]
-        if !self.mcule.is_up_to_date() && !always_compile {
+        if !self.mcule.is_up_to_date() && !always_compile && !RedoxConfig::flag_is_active("clean") {
             println!("Detected Change!");
             println!("Recompiling build script...");
             self.mcule.report_and_just_compile();
