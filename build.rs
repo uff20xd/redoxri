@@ -15,7 +15,7 @@ fn main() -> () {
 
     let main = Mcule::new("redoxri", "libredoxri.rlib")
         .add_step(&[
-            "rustc", "./redoxri.rs", "--crate-type", "lib",  
+            "rustc", "./redoxri.rs", "--crate-type", "lib", "--edition=2024"
         ])
         .with(&["redoxri.rs".into()])
         .compile();
