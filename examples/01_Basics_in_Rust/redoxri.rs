@@ -146,7 +146,7 @@ impl Redoxri {
             //println!("Not Bootstrapped");
         }
 
-        if always_compile {
+        if always_compile || RedoxConfig::flag_is_active("self_build") {
             self.mcule.mute();
             unsafe { FULL_MUTE = true; }
             self.mcule.report_and_just_compile();
