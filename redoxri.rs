@@ -23,6 +23,7 @@ pub type Cmd = Command;
 pub type RxiError = Box<dyn std::error::Error>;
 
 static mut FULL_MUTE: bool = false;
+static mut FLAGS:  = Arc::new::<[str]>()
 
 #[derive(Clone, Debug)]
 pub struct Redoxri {
