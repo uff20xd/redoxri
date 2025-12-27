@@ -1,7 +1,7 @@
 mod redoxri;
 use redoxri::*;
 // use std::path::Path;
-
+static COMMON_FLAGS: &[&str] = &["-Copt-level=1"];
 fn main() -> () {
     let _redoxri = Redoxri::new(&[
         //"--cfg", "isolate",
@@ -17,6 +17,7 @@ fn main() -> () {
         .add_step(&[
             "rustc", "./redoxri.rs", "--crate-type", "lib", "--edition=2024"
         ])
+            .add_args(COMMON_FLAGS)
         .with(&["redoxri.rs".into()])
         .compile();
 
