@@ -182,7 +182,7 @@ impl Redoxri {
 pub struct Mcule {
     pub name: String,
     pub outpath: String,
-    inputs: Vec<Mcule>,
+    pub inputs: Vec<Mcule>,
     recipe: Vec<Vec<String>>,
     last_changed: (),
     success: bool,
@@ -412,7 +412,7 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
         self.to_owned()
     }
 
-    pub fn add_step<T>(&mut self, step: &[&T]) -> Self 
+    pub fn add_step<T>(mut self, step: &[&T]) -> Self 
     where T: ?Sized + AsRef<str> + Debug {
         let mut new_step: Vec<String> = Vec::new();
         for arg in step {
@@ -422,7 +422,7 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
             else {new_step.push(arg.as_ref().to_string());}
         }
         self.recipe.push(new_step);
-        self.clone()
+        self
     }
 
     pub fn add_args<T>(mut self, step: &[&T]) -> Self 
@@ -436,7 +436,7 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
         }
         let last_index = self.recipe.len() - 1;
         self.recipe[last_index].append(&mut new_args);
-        self.clone()
+        self
     }
 
     fn parse_arg(_arg: &str) -> String { todo!() }

@@ -14,11 +14,12 @@ fn main() -> () {
     ]);
 
     let main = Mcule::new("redoxri", "libredoxri.rlib")
+        .with(&["redoxri.rs".into()]);
+    let _main = main.clone()
         .add_step(&[
-            "rustc", "./redoxri.rs", "--crate-type", "lib", "--edition=2024"
+            "rustc", &main.inputs[0].outpath, "--crate-type", "lib", "--edition=2024"
         ])
-            .add_args(COMMON_FLAGS)
-        .with(&["redoxri.rs".into()])
+        .add_args(COMMON_FLAGS)
         .compile();
 
     let redoxsrc = Mcule::new("redoxsrc", "redoxri.rs");
