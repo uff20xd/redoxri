@@ -425,7 +425,7 @@ In Mcule: {}; with outpath: {}", name.as_ref(), outpath);
         self
     }
 
-    pub fn add_args<T>(mut self, step: &[&T]) -> Self 
+    pub fn with_flags<T>(mut self, step: &[&T]) -> Self 
     where T: ?Sized + AsRef<str> + Debug {
         let mut new_args: Vec<String> = Vec::new();
         for arg in step {
