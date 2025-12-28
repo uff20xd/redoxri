@@ -1,7 +1,7 @@
 mod redoxri;
 use redoxri::*;
 // use std::path::Path;
-static COMMON_FLAGS: &[&str] = &["-Copt-level=1"];
+static COMMON_FLAGS: &[&str] = &["-Copt-level=0"];
 fn main() -> () {
     let _redoxri = Redoxri::new(&[
         //"--cfg", "isolate",
@@ -19,7 +19,7 @@ fn main() -> () {
         .add_step(&[
             "rustc", &main.inputs[0].outpath, "--crate-type", "lib", "--edition=2024"
         ])
-        .add_args(COMMON_FLAGS)
+        .with_flags(COMMON_FLAGS)
         .compile();
 
     let redoxsrc = Mcule::new("redoxsrc", "redoxri.rs");
